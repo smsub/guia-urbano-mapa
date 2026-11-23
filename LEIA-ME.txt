@@ -1,0 +1,24 @@
+GUIA URBANO – ÁREAS DE LAZER DE SÃO PAULO
+
+Estrutura inicial do mapa:
+- index.html: interface e mapa Leaflet.
+- dados/locais.geojson: base centralizada dos pontos (vazia até concluir a validação geográfica).
+
+Tecnologias previstas:
+- Leaflet para exibição do mapa.
+- OpenStreetMap como camada cartográfica.
+- GeoJSON para manter os locais separados do código da página.
+- GitHub Pages para hospedagem gratuita, com incorporação no portal institucional.
+
+Campos recomendados em properties de cada Feature:
+- id
+- categoria
+- subprefeitura
+- nome
+- endereco
+- quantidade
+- fonte
+- situacao_localizacao
+- observacoes
+
+A geometria deve usar Point com coordenadas na ordem [longitude, latitude]. Não inserir coordenadas estimadas sem validação.

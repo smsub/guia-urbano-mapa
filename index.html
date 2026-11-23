@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Guia Urbano – Áreas de Lazer de São Paulo. Encontre equipamentos públicos de lazer na cidade.">
+  <title>Guia Urbano | Áreas de Lazer de São Paulo</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+  <style>
+    :root{--azul:#06375d;--azul2:#005ca9;--fundo:#fff;--texto:#172b3a;--borda:#cbd5df;--sombra:0 2px 12px #102a4330}
+    *{box-sizing:border-box}html,body{height:100%;margin:0;font-family:Arial,Tahoma,sans-serif;color:var(--texto)}
+    .app{height:100%;display:flex;flex-direction:column}.topo{z-index:500;display:flex;align-items:center;gap:14px;padding:12px 18px;background:var(--azul);color:white;box-shadow:var(--sombra)}
+    .marca{font-size:1.05rem;font-weight:700;line-height:1.2}.marca small{display:block;font-size:.78rem;font-weight:400;margin-top:3px}
+    .mapa-wrap{position:relative;flex:1;min-height:0}#mapa{height:100%;width:100%;background:#e8edf1}
+    .painel{position:absolute;z-index:450;top:14px;left:14px;width:min(350px,calc(100% - 28px));padding:14px;background:#fff;border:1px solid var(--borda);border-radius:8px;box-shadow:var(--sombra);max-height:calc(100% - 28px);overflow:auto}
+    .painel h1{font-size:1rem;margin:0 0 12px;color:var(--azul)}label{display:block;font-size:.84rem;font-weight:700;margin:10px 0 5px}
+    input,select{width:100%;min-height:42px;border:1px solid #7d8b99;border-radius:5px;padding:8px 10px;font:inherit;background:#fff;color:var(--texto)}
+    .categorias{display:grid;grid-template-columns:1fr 1fr;gap:8px 10px;margin-top:8px}.categoria{display:flex;align-items:center;gap:7px;font-size:.83rem;font-weight:400;margin:0}.categoria input{width:18px;height:18px;min-height:18px;accent-color:var(--azul2)}
+    .acoes{display:flex;gap:8px;margin-top:12px}.acoes button{flex:1;min-height:38px;border:1px solid var(--azul2);border-radius:5px;background:white;color:var(--azul);font-weight:700;cursor:pointer}.acoes button:hover{background:#edf5fb}
+    .status{font-size:.78rem;color:#526575;margin:12px 0 0;line-height:1.4}.leaflet-popup-content{font-size:.9rem;line-height:1.45}.leaflet-popup-content strong{color:var(--azul)}
+    button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid #f2b544;outline-offset:2px}
+    @media(max-width:600px){.topo{padding:10px 12px}.painel{top:10px;left:10px;width:min(330px,calc(100% - 20px));padding:12px}.categorias{grid-template-columns:1fr 1fr}}
+  </style>
+</head>
+<body>
+<div class="app">
+  <header class="topo"><div class="marca">GUIA URBANO<small>Áreas de Lazer de São Paulo</small></div></header>
+  <main class="mapa-wrap" aria-label="Mapa interativo das áreas de lazer">
+    <div id="mapa" role="region" aria-label="Mapa de São Paulo com equipamentos públicos de lazer"></div>
+    <section class="painel" aria-labelledby="titulo-filtros">
+      <h1 id="titulo-filtros">Encontre uma área de lazer</h1>
+      <label for="busca">Buscar local</label>
+      <input id="busca" type="search" placeholder="Nome ou endereço" autocomplete="off">
+      <label for="subprefeitura">Subprefeitura</label>
+      <select id="subprefeitura"><option value="">Todas as subprefeituras</option></select>
+      <label>Tipo de equipamento</label>
+      <div class="categorias" id="categorias">
+        <label class="categoria"><input type="checkbox" value="ParCães" checked> ParCães</label>
+        <label class="categoria"><input type="checkbox" value="Skateparks" checked> Skateparks</label>
+        <label class="categoria"><input type="checkbox" value="Campos de futebol" checked> Campos de futebol</label>
+        <label class="categoria"><input type="checkbox" value="Play Lúdico" checked> Play Lúdico</label>
+        <label class="categoria"><input type="checkbox" value="Pipódromos" checked> Pipódromos</label>
+        <label class="categoria"><input type="checkbox" value="Academias ao ar livre" checked> Academias ao ar livre</label>
+      </div>
+      <div class="acoes"><button type="button" id="limpar">Limpar filtros</button><button type="button" id="visao-geral">Ver cidade toda</button></div>
+      <p class="status" id="status" role="status" aria-live="polite">Estrutura inicial. Os marcadores serão carregados após a validação das coordenadas.</p>
+    </section>
+  </main>
+</div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script>
+(() => {
+  const mapa = L.map('mapa', {zoomControl:true}).setView([-23.5505,-46.6333], 10);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom:19, attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+  }).addTo(mapa);
+  const grupo = L.geoJSON(null, {
+    onEachFeature:(feature, layer) => {
+      const p = feature.properties || {};
+      const nome = escapeHtml(p.nome || 'Equipamento de lazer');
+      const categoria = escapeHtml(p.categoria || '');
+      const endereco = escapeHtml(p.endereco || 'Endereço em validação');
+      const sub = escapeHtml(p.subprefeitura || '');
+      const qtd = p.quantidade > 1 ? `<br><strong>Quantidade:</strong> ${Number(p.quantidade)}` : '';
+      layer.bindPopup(`<strong>${nome}</strong><br>${categoria}<br>${endereco}${sub ? `<br>${sub}` : ''}${qtd}`);
+    }
+  }).addTo(mapa);
+  let todos = [];
+  const busca = document.getElementById('busca');
+  const sub = document.getElementById('subprefeitura');
+  const status = document.getElementById('status');
+  const checks = [...document.querySelectorAll('#categorias input')];
+  function escapeHtml(v){return String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+  function aplicarFiltros(){
+    const termo = busca.value.trim().toLocaleLowerCase('pt-BR');
+    const cats = checks.filter(c=>c.checked).map(c=>c.value);
+    const filtrados = todos.filter(f=>{const p=f.properties||{};const texto=[p.nome,p.endereco,p.subprefeitura].join(' ').toLocaleLowerCase('pt-BR');return cats.includes(p.categoria)&&(!sub.value||p.subprefeitura===sub.value)&&(!termo||texto.includes(termo));});
+    grupo.clearLayers(); grupo.addData({type:'FeatureCollection',features:filtrados});
+    status.textContent = todos.length ? `${filtrados.length} de ${todos.length} locais exibidos.` : 'Estrutura inicial. Os marcadores serão carregados após a validação das coordenadas.';
+  }
+  fetch('dados/locais.geojson').then(r=>{if(!r.ok)throw new Error('Base ainda não publicada');return r.json();}).then(data=>{
+    todos=(data.features||[]).filter(f=>Array.isArray(f.geometry?.coordinates)&&f.geometry.coordinates.length>=2&&f.geometry.coordinates.every(Number.isFinite));
+    const nomes=[...new Set(todos.map(f=>f.properties?.subprefeitura).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'pt-BR'));
+    nomes.forEach(n=>{const o=document.createElement('option');o.value=n;o.textContent=n;sub.appendChild(o);}); aplicarFiltros();
+  }).catch(()=>{status.textContent='Mapa preparado. A base de pontos será conectada quando a geolocalização estiver concluída.';});
+  busca.addEventListener('input',aplicarFiltros);sub.addEventListener('change',aplicarFiltros);checks.forEach(c=>c.addEventListener('change',aplicarFiltros));
+  document.getElementById('limpar').addEventListener('click',()=>{busca.value='';sub.value='';checks.forEach(c=>c.checked=true);aplicarFiltros();});
+  document.getElementById('visao-geral').addEventListener('click',()=>mapa.setView([-23.5505,-46.6333],10));
+})();
+</script>
+</body>
+</html>
