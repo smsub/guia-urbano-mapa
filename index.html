@@ -15,6 +15,11 @@ main{padding:8px;max-width:none}.panel #map,.panel #list{height:500px;min-height
 
 /* Ajuste para a largura do portal e alinhamento dos painéis. */
 .panel{display:flex;flex-direction:column}.maphead{min-height:48px}#listpanel h3{min-height:48px}.toolbar label{min-width:0}.toolbar select{min-width:0} @media(max-width:760px){.toolbar label{flex:1 1 42%}.toolbar button{flex:0 0 auto}.panel #map{height:350px}.panel #list{height:220px}}
+
+/* Altura ampliada do mapa e da lista. */
+.panel #map,.panel #list{height:650px}
+@media(max-width:760px){.panel #map{height:520px}.panel #list{height:220px}}
+@media(max-width:480px){.panel #map{height:450px}}
 </style></head><body><main>
 <div class="toolbar"><label>Categoria<select id="cat"><option value="">Todas as categorias</option></select></label><label>Subprefeitura<select id="sub"><option value="">Todas as subprefeituras</option></select></label><button id="clear">Limpar filtros</button></div>
 <div class="layout" id="layout" data-view="map"><section class="panel" id="mappanel"><div class="maphead"><h3>Mapa</h3><button type="button" id="togglelist" aria-controls="listpanel" aria-expanded="false">Ver endereços »</button></div><div id="map" aria-label="Mapa dos equipamentos de lazer">Carregando mapa…</div></section><section class="panel" id="listpanel"><h3>Todos os endereços <span id="count" aria-live="polite"></span></h3><div id="list"></div></section></div>
